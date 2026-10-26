@@ -1,0 +1,26 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        version: [latest, 1.18.0]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: nickel
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+      - shell: bash
+        run: |
+          nickel --version
+          if [ "${{ matrix.version }}" != latest ]; then
+            test "${{ steps.nickel.outputs.version }}" = "${{ matrix.version }}"
+          fi

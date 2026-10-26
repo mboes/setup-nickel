@@ -1,0 +1,52 @@
+name: Setup Nickel
+description: |
+  Install the Nickel configuration language.
+author: Mathieu Boespflug
+branding:
+  icon: settings
+  color: purple
+
+inputs:
+  version:
+    description: Nickel version to install, e.g. "1.18.0", or "latest".
+    required: false
+    default: latest
+
+outputs:
+  version:
+    description: The Nickel version that was installed.
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        NICKEL_VERSION: ${{ inputs.version }}
+      run: |
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64)     asset=nickel-x86_64-linux;       exe=nickel ;;
+          Linux-ARM64)   asset=nickel-arm64-linux;        exe=nickel ;;
+          macOS-ARM64)   asset=nickel-arm64-macos;        exe=nickel ;;
+          Windows-X64)   asset=nickel-x86_64-windows.exe; exe=nickel.exe ;;
+          *) echo "::error::Nickel has no prebuilt binary for $RUNNER_OS on $RUNNER_ARCH."; exit 1 ;;
+        esac
+
+        version="${NICKEL_VERSION#v}"
+        if [ "$version" = latest ]; then
+          url="https://github.com/nickel-lang/nickel/releases/latest/download/$asset"
+        else
+          url="https://github.com/nickel-lang/nickel/releases/download/$version/$asset"
+        fi
+
+        dir="$RUNNER_TOOL_CACHE/nickel/$version/$RUNNER_ARCH"
+        mkdir -p "$dir"
+        echo "Downloading $url"
+        curl --fail --silent --show-error --location --retry 3 -o "$dir/$exe" "$url"
+        chmod +x "$dir/$exe"
+        echo "$dir" >> "$GITHUB_PATH"
+
+        installed="$("$dir/$exe" --version | awk '{print $3}')"
+        echo "version=$installed" >> "$GITHUB_OUTPUT"
+        echo "Installed Nickel $installed"
