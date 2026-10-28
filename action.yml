@@ -47,6 +47,13 @@ runs:
         chmod +x "$dir/$exe"
         echo "$dir" >> "$GITHUB_PATH"
 
+        # Workaround https://github.com/nickel-lang/nickel/issues/2608
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          old=$(otool -L "$dir/$exe" | awk 'NR>1 && /libiconv/ {print $1; exit}')
+          [ -n "$old" ] && install_name_tool -change "$old" /usr/lib/libiconv.2.dylib "$dir/$exe"
+          codesign --force --sign - "$dir/$exe"
+        fi
+
         installed="$("$dir/$exe" --version | awk '{print $3}')"
         echo "version=$installed" >> "$GITHUB_OUTPUT"
         echo "Installed Nickel $installed"
